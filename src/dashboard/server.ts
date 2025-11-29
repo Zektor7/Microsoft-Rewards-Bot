@@ -139,7 +139,7 @@ export class DashboardServer {
     // Intercept Logger.log calls by wrapping at module level
     // This ensures all log calls go through dashboard state
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const loggerModule = require('../util/Logger') as { log: typeof botLog }
+    const loggerModule = require('../util/notifications/Logger') as { log: typeof botLog }
     const originalLog = loggerModule.log
 
     loggerModule.log = (
