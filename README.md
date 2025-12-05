@@ -7,11 +7,13 @@
 
 # Microsoft Rewards Bot
 
+## ⚠️ ACCOUNT CREATION MODE DETECTED ⚠️
+
 **Automate your Microsoft Rewards points collection**
 
 [![Discord](https://img.shields.io/badge/💬_Discord-7289DA?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/k5uHkx9mne) 
 [![GitHub](https://img.shields.io/badge/⭐_Star-yellow?style=for-the-badge&logo=github&logoColor=black)](https://github.com/LightZirconite/Microsoft-Rewards-Bot)
-[![Version](https://img.shields.io/badge/v2.60.0-blue?style=for-the-badge)](https://github.com/LightZirconite/Microsoft-Rewards-Bot/releases)
+[![Version](https://img.shields.io/badge/v2.60.1-blue?style=for-the-badge)](https://github.com/LightZirconite/Microsoft-Rewards-Bot/releases)
 
 </div>
 
