@@ -111,8 +111,17 @@ function updateConnectionStatus(connected) {
 
 // Charts
 function initCharts() {
+    // FIXED: Fallback if Chart.js blocked by tracking prevention
     if (typeof Chart === 'undefined') {
-        console.warn('Chart.js not loaded')
+        console.warn('[Charts] Chart.js not loaded (may be blocked by tracking prevention)')
+        var pointsCanvas = document.getElementById('pointsChart')
+        var activityCanvas = document.getElementById('activityChart')
+        if (pointsCanvas) {
+            pointsCanvas.parentElement.innerHTML = '<div style="padding: 2rem; text-align: center; color: #8b949e;">Charts unavailable (Chart.js blocked by browser)</div>'
+        }
+        if (activityCanvas) {
+            activityCanvas.parentElement.innerHTML = '<div style="padding: 2rem; text-align: center; color: #8b949e;">Charts unavailable (Chart.js blocked by browser)</div>'
+        }
         return
     }
     initPointsChart()
@@ -634,7 +643,7 @@ function executeSingleAccount() {
         .then((data) => {
             if (data.success) {
                 showToast('✓ Bot started for account: ' + maskEmail(email), 'success')
-                loadStatus()
+                refreshData() // FIXED: Use refreshData() instead of undefined loadStatus()
             } else {
                 showToast('✗ Failed to start: ' + (data.error || 'Unknown error'), 'error')
             }

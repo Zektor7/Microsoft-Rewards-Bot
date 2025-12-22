@@ -125,11 +125,19 @@ class DashboardState {
   }
 
   private maskEmail(email: string): string {
-    const [local, domain] = email.split('@')
-    if (!local || !domain) return email
-    const maskedLocal = local.length > 2 ? `${local.slice(0, 1)}***` : '***'
-    const [domainName, tld] = domain.split('.')
-    const maskedDomain = domainName && domainName.length > 1 ? `${domainName.slice(0, 1)}***.${tld || 'com'}` : domain
+    const parts = email.split('@')
+    if (parts.length !== 2) return '***@***'
+    
+    const [local, domain] = parts
+    if (!local || !domain) return '***@***'
+    
+    // SECURITY: More aggressive masking to prevent account enumeration
+    const maskedLocal = local.length <= 2 ? '**' : local.slice(0, 2) + '*'.repeat(Math.min(local.length - 2, 5))
+    
+    const domainParts = domain.split('.')
+    const tld = domainParts.pop() || 'com'
+    const maskedDomain = domain.length <= 4 ? '***.' + tld : domain.slice(0, 2) + '***.' + tld
+    
     return `${maskedLocal}@${maskedDomain}`
   }
 
