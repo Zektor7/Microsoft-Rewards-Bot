@@ -1,0 +1,26 @@
+name: 🔁 Sync from upstream
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # 每天 UTC 2 点运行（北京时间 10 点）
+  workflow_dispatch:      # 也支持手动触发
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🔄 Sync fork with upstream
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Add upstream
+        run: |
+          git remote add upstream https://github.com/LightZirconite/Microsoft-Rewards-Bot.git
+          git fetch upstream
+
+      - name: Reset main to upstream/main
+        run: |
+          git checkout main
+          git reset --hard upstream/main
+          git push origin main --force
