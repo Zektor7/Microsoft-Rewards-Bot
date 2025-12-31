@@ -15,8 +15,8 @@ services:
 
     # Volume mounts: Same as the cron version
     volumes:
-      - ../src/accounts.jsonc:/usr/src/microsoft-rewards-bot/accounts.jsonc:ro
-      - ../src/config.jsonc:/usr/src/microsoft-rewards-bot/config.jsonc:ro
+      - ../src/accounts.jsonc:/usr/src/microsoft-rewards-bot/src/accounts.jsonc
+      - ../src/config.jsonc:/usr/src/microsoft-rewards-bot/src/config.jsonc
       - ../sessions:/usr/src/microsoft-rewards-bot/sessions
       # Optional: Persist reports if needed
       - ../reports:/usr/src/microsoft-rewards-bot/reports
