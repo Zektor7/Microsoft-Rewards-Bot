@@ -89,4 +89,4 @@ RUN sed -i 's/\r$//' /usr/local/bin/entrypoint.sh \
 
 # Entrypoint handles TZ, initial run toggle, cron templating & launch
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
-CMD ["sh", "-c", "echo 'Container started; cron is running.'"]
+CMD ["cron", "-f"]

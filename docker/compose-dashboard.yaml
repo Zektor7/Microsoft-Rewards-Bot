@@ -1,0 +1,39 @@
+services:
+  microsoft-rewards-dashboard:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: microsoft-rewards-dashboard
+    restart: unless-stopped
+    
+    # Override the default command (cron) with the dashboard command
+    command: npm run dashboard
+    
+    # Expose the dashboard port
+    ports:
+      - "3000:3000"
+
+    # Volume mounts: Same as the cron version
+    volumes:
+      - ../src/accounts.jsonc:/usr/src/microsoft-rewards-bot/accounts.jsonc:ro
+      - ../src/config.jsonc:/usr/src/microsoft-rewards-bot/config.jsonc:ro
+      - ../sessions:/usr/src/microsoft-rewards-bot/sessions
+      # Optional: Persist reports if needed
+      - ../reports:/usr/src/microsoft-rewards-bot/reports
+
+    environment:
+      TZ: "UTC" # Set your timezone
+      NODE_ENV: "production"
+      
+      # Dashboard Configuration
+      # HOST must be 0.0.0.0 to be accessible outside the container
+      DASHBOARD_HOST: "0.0.0.0" 
+      DASHBOARD_PORT: "3000"
+
+      # Optional resource limits
+    mem_limit: 4g
+    cpus: 2
+
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true

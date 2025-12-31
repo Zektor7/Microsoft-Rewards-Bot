@@ -46,5 +46,9 @@ crontab /etc/cron.d/microsoft-rewards-cron
 
 echo "[entrypoint] Cron configured with schedule: $CRON_SCHEDULE and timezone: $TZ; starting cron at $(date)"
 
-# 5. Start cron in foreground (PID 1)
-exec cron -f
+# 5. Execute command (defaults to cron if CMD is used)
+if [ "$#" -gt 0 ]; then
+  exec "$@"
+else
+  exec cron -f
+fi
