@@ -46,7 +46,7 @@ export async function disableBannedAccount(email: string, reason: string): Promi
         }
 
         // Find the account
-        const accountIndex = accountsArray.findIndex((acc: unknown) => acc.email === email)
+        const accountIndex = accountsArray.findIndex((acc: any) => acc && typeof acc === 'object' && acc.email === email)
         if (accountIndex === -1) {
             throw new Error(`Account ${email} not found in accounts.jsonc`)
         }
