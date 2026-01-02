@@ -712,25 +712,31 @@ function exportLogs() {
 }
 
 function openConfig() {
-    showModal('Configuration Editor', `
+    showModal('Configuration Viewer', `
         <div class="config-loading">Loading configuration...</div>
     `, [])
 
-    // Fetch current config
+    // Fetch config (read-only view)
     fetch('/api/config')
         .then(r => r.json())
-        .then(config => {
+        .then(data => {
             const body = `
                 <div class="config-editor">
-                    <textarea id="configEditor" class="config-textarea">${JSON.stringify(config, null, 2)}</textarea>
-                    <p class="config-hint">⚠️ Advanced users only. Invalid JSON will break the bot.</p>
+                    <div class="config-warning">
+                        ⚠️ <strong>Read-Only View</strong><br>
+                        This is a simplified preview. To edit config:<br>
+                        1. Open <code>src/config.jsonc</code> in a text editor<br>
+                        2. Make your changes<br>
+                        3. Save and restart the bot
+                    </div>
+                    <textarea id="configEditor" class="config-textarea" readonly>${JSON.stringify(data.config, null, 2)}</textarea>
+                    <p class="config-hint">💡 Manual editing preserves comments and complex settings</p>
                 </div>
             `
             const buttons = [
-                { cls: 'btn btn-sm btn-secondary', action: 'closeModal()', text: 'Cancel' },
-                { cls: 'btn btn-sm btn-primary', action: 'saveConfig()', text: 'Save Changes' }
+                { cls: 'btn btn-sm btn-secondary', action: 'closeModal()', text: 'Close' }
             ]
-            showModal('Configuration Editor', body, buttons)
+            showModal('Configuration Viewer', body, buttons)
         })
         .catch(e => {
             showToast('Failed to load config: ' + e.message, 'error')
@@ -739,32 +745,9 @@ function openConfig() {
 }
 
 function saveConfig() {
-    const editor = document.getElementById('configEditor')
-    if (!editor) return
-
-    try {
-        const newConfig = JSON.parse(editor.value)
-
-        fetch('/api/config', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(newConfig)
-        })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    showToast('Configuration saved! Restart bot for changes to apply.', 'success')
-                    closeModal()
-                } else {
-                    showToast('Save failed: ' + (data.error || 'Unknown error'), 'error')
-                }
-            })
-            .catch(e => {
-                showToast('Save failed: ' + e.message, 'error')
-            })
-    } catch (e) {
-        showToast('Invalid JSON format: ' + e.message, 'error')
-    }
+    // Config editing is disabled - this function is now unused
+    showToast('Config editing disabled. Edit src/config.jsonc manually.', 'warning')
+    closeModal()
 }
 
 function viewHistory() {

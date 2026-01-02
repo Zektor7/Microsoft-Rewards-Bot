@@ -5,6 +5,7 @@ import { AccountHistory } from '../util/state/AccountHistory'
 import { getConfigPath, loadAccounts, loadConfig } from '../util/state/Load'
 import { botController } from './BotController'
 import { dashboardState } from './state'
+import { statsManager } from './StatsManager'
 
 export const apiRouter = Router()
 
@@ -110,42 +111,44 @@ apiRouter.get('/history', (_req: Request, res: Response): void => {
 // GET /api/config - Current config (tokens masked)
 apiRouter.get('/config', (_req: Request, res: Response) => {
   try {
+    // CRITICAL: Load raw config.jsonc to preserve comments
+    const configPath = getConfigPath()
+    if (!fs.existsSync(configPath)) {
+      res.status(404).json({ error: 'Config file not found' })
+      return
+    }
+
+    // Read raw JSONC content (preserves comments)
+    const rawConfig = fs.readFileSync(configPath, 'utf-8')
+
+    // Parse and sanitize for display
     const config = loadConfig()
     const safe = JSON.parse(JSON.stringify(config))
 
-    // Mask sensitive data
+    // Mask sensitive data (but keep structure)
     if (safe.webhook?.url) safe.webhook.url = maskUrl(safe.webhook.url)
     if (safe.conclusionWebhook?.url) safe.conclusionWebhook.url = maskUrl(safe.conclusionWebhook.url)
     if (safe.ntfy?.authToken) safe.ntfy.authToken = '***'
 
-    res.json(safe)
+    // WARNING: Show user this is read-only view
+    res.json({
+      config: safe,
+      warning: 'This is a simplified view. Direct file editing recommended for complex changes.',
+      rawPreview: rawConfig.split('\\n').slice(0, 10).join('\\n') + '\\n...' // First 10 lines
+    })
   } catch (error) {
     res.status(500).json({ error: getErr(error) })
   }
 })
 
-// POST /api/config - Update config (with backup)
+// POST /api/config - Update config (DISABLED - manual editing only)
 apiRouter.post('/config', (req: Request, res: Response): void => {
-  try {
-    const newConfig = req.body
-    const configPath = getConfigPath()
-
-    if (!configPath || !fs.existsSync(configPath)) {
-      res.status(404).json({ error: 'Config file not found' })
-      return
-    }
-
-    // Backup current config
-    const backupPath = `${configPath}.backup.${Date.now()}`
-    fs.copyFileSync(configPath, backupPath)
-
-    // Write new config
-    fs.writeFileSync(configPath, JSON.stringify(newConfig, null, 2), 'utf-8')
-
-    res.json({ success: true, backup: backupPath })
-  } catch (error) {
-    res.status(500).json({ error: getErr(error) })
-  }
+  // DISABLED: Config editing via API is unsafe (loses JSONC comments)
+  // Users should edit config.jsonc manually
+  res.status(403).json({
+    error: 'Config editing via dashboard is disabled to preserve JSONC format.',
+    hint: 'Please edit src/config.jsonc manually with a text editor.'
+  })
 })
 
 // POST /api/start - Start bot in background
@@ -235,7 +238,12 @@ apiRouter.get('/metrics', (_req: Request, res: Response) => {
     const accountsWithErrors = accounts.filter(a => a.errors && a.errors.length > 0).length
     const avgPoints = accounts.length > 0 ? Math.round(totalPoints / accounts.length) : 0
 
+    // Load persistent stats
+    const globalStats = statsManager.loadGlobalStats()
+    const todayStats = statsManager.loadDailyStats(new Date().toISOString().slice(0, 10))
+
     res.json({
+      // Current session metrics
       totalAccounts: accounts.length,
       totalPoints,
       avgPoints,
@@ -243,8 +251,68 @@ apiRouter.get('/metrics', (_req: Request, res: Response) => {
       accountsRunning: accounts.filter(a => a.status === 'running').length,
       accountsCompleted: accounts.filter(a => a.status === 'completed').length,
       accountsIdle: accounts.filter(a => a.status === 'idle').length,
-      accountsError: accounts.filter(a => a.status === 'error').length
+      accountsError: accounts.filter(a => a.status === 'error').length,
+
+      // Persistent stats
+      globalStats: {
+        totalRunsAllTime: globalStats.totalRunsAllTime,
+        totalPointsAllTime: globalStats.totalPointsAllTime,
+        averagePointsPerDay: globalStats.averagePointsPerDay,
+        lastRunDate: globalStats.lastRunDate,
+        firstRunDate: globalStats.firstRunDate
+      },
+
+      // Today's stats
+      todayStats: todayStats || {
+        totalPoints: 0,
+        accountsCompleted: 0,
+        accountsWithErrors: 0
+      }
     })
+  } catch (error) {
+    res.status(500).json({ error: getErr(error) })
+  }
+})
+
+// GET /api/stats/history/:days - Get stats history
+apiRouter.get('/stats/history/:days', (req: Request, res: Response) => {
+  try {
+    const daysParam = req.params.days
+    if (!daysParam) {
+      res.status(400).json({ error: 'Days parameter required' })
+      return
+    }
+    const days = Math.min(parseInt(daysParam, 10) || 7, 90)
+    const history = statsManager.getLastNDays(days)
+    res.json(history)
+  } catch (error) {
+    res.status(500).json({ error: getErr(error) })
+  }
+})
+
+// POST /api/stats/record - Record new stats (called by bot after run)
+apiRouter.post('/stats/record', (req: Request, res: Response) => {
+  try {
+    const { pointsEarned, accountsCompleted, accountsWithErrors, totalSearches, totalActivities, runDuration } = req.body
+
+    const today = new Date().toISOString().slice(0, 10)
+    const existingStats = statsManager.loadDailyStats(today)
+
+    // Merge with existing stats if run multiple times today
+    const dailyStats = {
+      date: today,
+      totalPoints: (existingStats?.totalPoints || 0) + (pointsEarned || 0),
+      accountsCompleted: (existingStats?.accountsCompleted || 0) + (accountsCompleted || 0),
+      accountsWithErrors: (existingStats?.accountsWithErrors || 0) + (accountsWithErrors || 0),
+      totalSearches: (existingStats?.totalSearches || 0) + (totalSearches || 0),
+      totalActivities: (existingStats?.totalActivities || 0) + (totalActivities || 0),
+      runDuration: (existingStats?.runDuration || 0) + (runDuration || 0)
+    }
+
+    statsManager.saveDailyStats(dailyStats)
+    statsManager.incrementGlobalStats(pointsEarned || 0)
+
+    res.json({ success: true, stats: dailyStats })
   } catch (error) {
     res.status(500).json({ error: getErr(error) })
   }
