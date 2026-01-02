@@ -187,7 +187,7 @@ export async function sendErrorReport(
         }
 
         // Determine API endpoint URL
-        const defaultApiUrl = 'https://rewards-bot-eight.vercel.app/api/report-error'
+        const defaultApiUrl = 'https://light-rewards-bot.vercel.app/api/report-error'
         const apiUrl = config.errorReporting?.apiUrl || defaultApiUrl
         const rateLimitSecret = config.errorReporting?.secret
 

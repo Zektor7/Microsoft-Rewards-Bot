@@ -1,6 +1,6 @@
 // Health check endpoint for Vercel
 module.exports = function handler(req, res) {
-    res.json({ 
+    res.json({
         status: 'ok',
         timestamp: new Date().toISOString(),
         endpoints: {

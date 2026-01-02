@@ -3,7 +3,7 @@
 Write-Host "Testing Vercel Error Reporting System..." -ForegroundColor Cyan
 Write-Host ""
 
-$apiUrl = "https://rewards-bot-eight.vercel.app/api/report-error"
+$apiUrl = "https://light-rewards-bot.vercel.app/api/report-error"
 $timestamp = [DateTime]::UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
 
 $payload = @{
