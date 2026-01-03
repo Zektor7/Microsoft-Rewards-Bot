@@ -6,8 +6,8 @@ services:
     container_name: microsoft-rewards-dashboard
     restart: unless-stopped
     
-    # Override the default command (cron) with the dashboard command
-    command: npm run dashboard
+    # Default command now runs both Cron and Dashboard
+    # command: ./docker/start_combined.sh
     
     # Expose the dashboard port
     ports:

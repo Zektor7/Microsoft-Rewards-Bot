@@ -87,12 +87,14 @@ COPY assets ./assets
 # IMPROVED: Scripts now organized in docker/ folder
 COPY --chmod=755 docker/run_daily.sh ./docker/run_daily.sh
 COPY --chmod=755 docker/start_dashboard.sh ./docker/start_dashboard.sh
+COPY --chmod=755 docker/start_combined.sh ./docker/start_combined.sh
 COPY --chmod=644 docker/crontab.template /etc/cron.d/microsoft-rewards-cron.template
 COPY --chmod=755 docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN sed -i 's/\r$//' /usr/local/bin/entrypoint.sh \
     && sed -i 's/\r$//' ./docker/run_daily.sh \
-    && sed -i 's/\r$//' ./docker/start_dashboard.sh
+    && sed -i 's/\r$//' ./docker/start_dashboard.sh \
+    && sed -i 's/\r$//' ./docker/start_combined.sh
 
 # Entrypoint handles TZ, initial run toggle, cron templating & launch
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
-CMD ["cron", "-f"]
+CMD ["./docker/start_combined.sh"]
