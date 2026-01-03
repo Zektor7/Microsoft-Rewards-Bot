@@ -406,7 +406,9 @@ export function getAntiDetectionScript(options: {
     // LAYER 10: Hardware Concurrency & Device Memory
     // ═══════════════════════════════════════════════════════════════════════════
     
-    const commonCores = [4, 6, 8, 12, 16];
+    // IMPROVED: Limit to common consumer CPUs (4-8 cores)
+    // 12-16 cores are rare and can flag datacenter/server detection
+    const commonCores = [4, 6, 8];
     const realCores = navigator.hardwareConcurrency || 4;
     const normalizedCores = commonCores.reduce((prev, curr) =>
         Math.abs(curr - realCores) < Math.abs(prev - realCores) ? curr : prev
@@ -663,7 +665,5 @@ export function getTimezoneScript(timezone?: string, locale?: string): string {
 `
 }
 
-export default {
-    getAntiDetectionScript,
-    getTimezoneScript
-}
+// All exports are named - use individual imports:
+// import { getAntiDetectionScript, getTimezoneScript } from './AntiDetectionScripts'

@@ -44,6 +44,16 @@ export async function getUserAgent(isMobile: boolean): Promise<UserAgentResult> 
     const system = getSystemComponents(isMobile)
     const app = await getAppComponents(isMobile)
 
+    // IMPROVED: Add random patch variation to Edge version for uniqueness
+    // e.g., 130.0.2849.68 → 130.0.2849.[68-75] random
+    const edgeVersionParts = app.edge_version.split('.')
+    if (edgeVersionParts.length === 4 && edgeVersionParts[3]) {
+        const basePatch = parseInt(edgeVersionParts[3], 10) || 0
+        const randomizedPatch = basePatch + Math.floor(Math.random() * 8) // +0 to +7 variation
+        edgeVersionParts[3] = String(randomizedPatch)
+        app.edge_version = edgeVersionParts.join('.')
+    }
+
     const uaTemplate = isMobile ?
         `Mozilla/5.0 (${system}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${app.chrome_reduced_version} Mobile Safari/537.36 EdgA/${app.edge_version}` :
         `Mozilla/5.0 (${system}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${app.chrome_reduced_version} Safari/537.36 Edg/${app.edge_version}`
@@ -142,8 +152,11 @@ export async function getEdgeVersions(isMobile: boolean): Promise<EdgeVersionRes
 
 export function getSystemComponents(mobile: boolean): string {
     if (mobile) {
-        const androidVersion = 10 + Math.floor(Math.random() * 5)
-        return `Linux; Android ${androidVersion}; K`
+        // IMPROVED: Android 10-14 coverage (was 10-14, now with sub-versions)
+        const androidMajor = 10 + Math.floor(Math.random() * 5) // 10, 11, 12, 13, 14
+        const androidMinor = Math.floor(Math.random() * 3) // 0, 1, 2
+        const androidPatch = Math.floor(Math.random() * 10) // 0-9
+        return `Linux; Android ${androidMajor}.${androidMinor}.${androidPatch}; K`
     }
 
     return 'Windows NT 10.0; Win64; x64'

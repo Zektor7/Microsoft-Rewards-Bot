@@ -162,25 +162,13 @@ function normalizeConfig(raw: unknown): Config {
         n.humanization.gestureScrollProb = !n.humanization.enabled ? 0 : 0.25
     }
 
-    // Vacation mode (monthly contiguous off-days)
-    if (!n.vacation) n.vacation = {}
-    if (typeof n.vacation.enabled !== 'boolean') n.vacation.enabled = false
-    const vMin = Number(n.vacation.minDays)
-    const vMax = Number(n.vacation.maxDays)
-    n.vacation.minDays = isFinite(vMin) && vMin > 0 ? Math.floor(vMin) : 3
-    n.vacation.maxDays = isFinite(vMax) && vMax > 0 ? Math.floor(vMax) : 5
-    if (n.vacation.maxDays < n.vacation.minDays) {
-        const t = n.vacation.minDays; n.vacation.minDays = n.vacation.maxDays; n.vacation.maxDays = t
-    }
+    // Vacation mode (monthly contiguous off-days) - REMOVED (not implemented)
 
     const riskRaw = (n.riskManagement ?? {}) as Record<string, unknown>
     const hasRiskCfg = Object.keys(riskRaw).length > 0
     const riskManagement = hasRiskCfg ? {
         enabled: riskRaw.enabled === true,
-        autoAdjustDelays: riskRaw.autoAdjustDelays !== false,
-        stopOnCritical: riskRaw.stopOnCritical === true,
-        banPrediction: riskRaw.banPrediction === true,
-        riskThreshold: typeof riskRaw.riskThreshold === 'number' ? riskRaw.riskThreshold : undefined
+        stopOnCritical: riskRaw.stopOnCritical === true
     } : undefined
 
     const queryDiversityRaw = (n.queryDiversity ?? {}) as Record<string, unknown>
@@ -236,7 +224,6 @@ function normalizeConfig(raw: unknown): Config {
         ntfy,
         update: n.update,
         passesPerRun: passesPerRun,
-        vacation: n.vacation,
         crashRecovery: n.crashRecovery || {},
         riskManagement,
         dryRun,

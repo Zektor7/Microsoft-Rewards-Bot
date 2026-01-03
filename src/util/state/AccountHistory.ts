@@ -76,10 +76,10 @@ export class AccountHistory {
                 const data = this.loadHistory(filePath)
                 if (data && !activeEmails.includes(data.email)) {
                     fs.unlinkSync(filePath)
-                    console.log(`[HISTORY] Cleaned up removed account: ${data.email}`)
+                    // Silent: Removed account cleanup is internal maintenance
                 }
             } catch (error) {
-                // Ignore invalid files
+                // Expected: Invalid history files may exist from previous versions
             }
         }
     }
@@ -91,7 +91,7 @@ export class AccountHistory {
             const content = fs.readFileSync(filePath, 'utf8')
             return JSON.parse(content) as AccountHistoryData
         } catch (error) {
-            console.error(`[HISTORY] Failed to load ${filePath}:`, error)
+            // Expected: File may be corrupted or from incompatible version
             return null
         }
     }
@@ -153,7 +153,7 @@ export class AccountHistory {
         try {
             fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8')
         } catch (error) {
-            console.error(`[HISTORY] Failed to save ${email}:`, error)
+            // Non-critical: History persistence failure doesn't affect bot operation
         }
     }
 

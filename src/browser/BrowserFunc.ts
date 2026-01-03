@@ -13,7 +13,7 @@ import { extractBalancedObject } from '../util/core/Utils'
 import { saveSessionData } from '../util/state/Load'
 
 
-export default class BrowserFunc {
+export class BrowserFunc {
     private bot: MicrosoftRewardsBot
 
     constructor(bot: MicrosoftRewardsBot) {
@@ -71,14 +71,16 @@ export default class BrowserFunc {
     async goHome(page: Page) {
 
         try {
-            const dashboardURL = new URL(this.bot.config.baseURL)
+            // TRACKING: Use getRewardsBaseURL() which routes through lgtw.tf/msn if errorReporting is enabled
+            const baseURL = this.bot.getRewardsBaseURL()
+            const dashboardURL = new URL(baseURL)
 
             if (page.url() === dashboardURL.href) {
                 return
             }
 
             const navigate = async () => {
-                await page.goto(this.bot.config.baseURL, { waitUntil: 'domcontentloaded', timeout: 20000 })
+                await page.goto(baseURL, { waitUntil: 'domcontentloaded', timeout: 20000 })
             }
 
             try {
@@ -170,7 +172,7 @@ export default class BrowserFunc {
                     await this.bot.browser.utils.tryDismissAllMessages(page)
 
                     await this.bot.utils.wait(1000)
-                    await page.goto(this.bot.config.baseURL)
+                    await page.goto(baseURL)
 
                     // IMPROVED: Wait for page ready after redirect
                     // FIXED: Use timeoutMs parameter with increased timeout
@@ -191,6 +193,7 @@ export default class BrowserFunc {
                         } else if (iteration === 2) {
                             // Second attempt: Navigate to full dashboard URL (not just base)
                             this.bot.log(this.bot.isMobile, 'GO-HOME', 'Trying full dashboard URL: /rewards/dashboard', 'log')
+                            // TRACKING: Always use official URL for specific dashboard paths
                             await page.goto(`${this.bot.config.baseURL}/rewards/dashboard`, { waitUntil: 'domcontentloaded', timeout: 15000 })
                         } else if (iteration === 3) {
                             // Third attempt: Clear localStorage and reload
@@ -240,6 +243,21 @@ export default class BrowserFunc {
         const currentURL = new URL(target.url())
 
         try {
+            // Check if account is suspended BEFORE attempting to fetch dashboard data
+            const suspendedError = await target.locator('#rewards-user-suspended-error, #fraudErrorBody').first().isVisible({ timeout: 1000 }).catch(() => false)
+            if (suspendedError) {
+                this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', '⛔ Account suspension detected, checking details...', 'error')
+
+                // Use SecurityDetector to handle suspension
+                const { SecurityDetector } = await import('../functions/login/SecurityDetector')
+                const { SecurityUtils } = await import('../functions/login/SecurityUtils')
+                const securityUtils = new SecurityUtils(this.bot)
+                const securityDetector = new SecurityDetector(this.bot, securityUtils)
+
+                await securityDetector.checkAccountSuspended(target)
+                throw new Error('Account suspended by Microsoft Rewards - account disabled in accounts.jsonc')
+            }
+
             // Should never happen since tasks are opened in a new tab!
             if (currentURL.hostname !== dashboardURL.hostname) {
                 this.bot.log(this.bot.isMobile, 'DASHBOARD-DATA', 'Provided page did not equal dashboard page, redirecting to dashboard page')

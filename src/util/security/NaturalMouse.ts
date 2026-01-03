@@ -337,10 +337,5 @@ export function generateIdleMovements(
     return { points, durations }
 }
 
-export default {
-    generateMousePath,
-    generateScrollPath,
-    generateIdleMovements,
-    cubicBezier,
-    addTremor
-}
+// All exports are named - use individual imports:
+// import { generateMousePath, generateScrollPath, ... } from './NaturalMouse'

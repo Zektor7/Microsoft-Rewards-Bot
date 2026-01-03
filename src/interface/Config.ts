@@ -23,7 +23,6 @@ export interface Config {
     ntfy: ConfigNtfy;
     update?: ConfigUpdate;
     passesPerRun?: number;
-    vacation?: ConfigVacation; // Optional monthly contiguous off-days
     crashRecovery?: ConfigCrashRecovery; // Automatic restart / graceful shutdown
     riskManagement?: ConfigRiskManagement; // Risk-aware throttling and ban prediction
     dryRun?: boolean; // Dry-run mode (simulate without executing)
@@ -87,16 +86,6 @@ export interface ConfigUpdate {
     scriptPath?: string; // optional custom path to update script relative to repo root
     autoUpdateConfig?: boolean; // if true, allow auto-update of config.jsonc when remote changes it (default: false to preserve user settings)
     autoUpdateAccounts?: boolean; // if true, allow auto-update of accounts.json when remote changes it (default: false to preserve credentials)
-    // DEPRECATED (v2.56.2+, remove in v3.0): method, docker fields no longer used
-    // Migration: update.mjs now exclusively uses GitHub API for all update methods
-    // See: scripts/installer/README.md for migration details
-    // TODO(@LightZirconite): Remove deprecated fields in v3.0 major release
-}
-
-export interface ConfigVacation {
-    enabled?: boolean; // default false
-    minDays?: number; // default 3
-    maxDays?: number; // default 5
 }
 
 export interface ConfigCrashRecovery {
@@ -178,10 +167,7 @@ export interface ConfigLogging {
 // NEW FEATURES: Risk Management and Query Diversity
 export interface ConfigRiskManagement {
     enabled?: boolean; // master toggle for risk-aware throttling
-    autoAdjustDelays?: boolean; // automatically increase delays when risk is high
     stopOnCritical?: boolean; // halt execution if risk reaches critical level
-    banPrediction?: boolean; // enable ML-style ban prediction
-    riskThreshold?: number; // 0-100, pause if risk exceeds this
 }
 
 export interface ConfigQueryDiversity {
@@ -197,10 +183,16 @@ export interface ConfigDashboard {
     host?: string; // bind address (default: 127.0.0.1)
 }
 
+export interface ConfigErrorReporting {
+    enabled?: boolean; // master toggle for error reporting
+    apiUrl?: string; // Vercel API endpoint URL (default: official endpoint)
+    secret?: string; // optional secret for bypassing rate limits
+}
+
 export interface ConfigScheduling {
     enabled?: boolean; // Enable automatic daily scheduling
     time?: string;     // Daily execution time in 24h format (HH:MM) - e.g., "09:00" for 9 AM (RECOMMENDED)
-    cron?: {           // Legacy cron format (for backwards compatibility) - DEPRECATED
+    cron?: {           // LEGACY: Cron format for backwards compatibility (prefer 'time' field)
         schedule?: string; // Cron expression - e.g., "0 9 * * *" for 9 AM daily
     };
     jitter?: {

@@ -7,6 +7,7 @@ reports/
 accounts-created/
 accounts.json
 accounts.jsonc
+config.jsonc
 notes
 accounts.dev.json
 accounts.dev.jsonc

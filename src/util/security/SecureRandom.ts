@@ -199,15 +199,5 @@ export function mouseSteps(distance: number): number {
     return Math.max(2, Math.round(humanVariance(baseSteps, 0.5)))
 }
 
-export default {
-    random: secureRandom,
-    int: secureRandomInt,
-    float: secureRandomFloat,
-    bool: secureRandomBool,
-    pick: secureRandomPick,
-    shuffle: secureRandomShuffle,
-    gaussian: secureGaussian,
-    humanVariance,
-    typingDelay,
-    mouseSteps
-}
+// All exports are named - use individual imports:
+// import { secureRandom, secureRandomInt, ... } from './SecureRandom'

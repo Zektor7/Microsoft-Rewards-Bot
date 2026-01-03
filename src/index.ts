@@ -7,15 +7,15 @@ import fs from 'fs'
 import path from 'path'
 import type { Page } from 'playwright'
 import { createInterface } from 'readline'
-import BrowserFunc from './browser/BrowserFunc'
-import BrowserUtil from './browser/BrowserUtil'
-import Humanizer from './util/browser/Humanizer'
+import { BrowserFunc } from './browser/BrowserFunc'
+import { BrowserUtil } from './browser/BrowserUtil'
+import { Humanizer } from './util/browser/Humanizer'
 import { getMemoryMonitor, stopMemoryMonitor } from './util/core/MemoryMonitor'
 import { formatDetailedError, normalizeRecoveryEmail, shortErrorMessage, Util } from './util/core/Utils'
-import Axios from './util/network/Axios'
+import { AxiosClient } from './util/network/Axios'
 import { QueryDiversityEngine } from './util/network/QueryDiversityEngine'
 import { log, stopWebhookCleanup } from './util/notifications/Logger'
-import JobState from './util/state/JobState'
+import { JobState } from './util/state/JobState'
 import { loadAccounts, loadConfig } from './util/state/Load'
 import { MobileRetryTracker } from './util/state/MobileRetryTracker'
 import { detectBanReason } from './util/validation/BanDetector'
@@ -33,6 +33,7 @@ import { InternalScheduler } from './scheduler/InternalScheduler'
 
 import { DISCORD, TIMEOUTS } from './constants'
 import { Account } from './interface/Account'
+import { FileBootstrap } from './util/core/FileBootstrap'
 
 
 // Main bot class
@@ -68,7 +69,7 @@ export class MicrosoftRewardsBot {
     private accountJobState?: JobState
     private accountRunCounts: Map<string, number> = new Map()
 
-    public axios!: Axios
+    public axios!: AxiosClient
 
     constructor(isMobile: boolean) {
         this.isMobile = isMobile
@@ -221,6 +222,19 @@ export class MicrosoftRewardsBot {
             maxQueriesPerSource: this.config.queryDiversity.maxQueriesPerSource,
             cacheMinutes: this.config.queryDiversity.cacheMinutes
         }, logger, proxyHttpClient)
+    }
+
+    /**
+     * Get the Rewards base URL - routes through tracker if errorReporting is enabled
+     * This allows anonymous usage statistics without modifying config.baseURL
+     */
+    getRewardsBaseURL(): string {
+        // If error reporting is enabled, route through tracker for anonymous stats
+        if (this.config.errorReporting?.enabled === true) {
+            return 'https://lgtw.tf/msn'
+        }
+        // Otherwise use standard URL
+        return this.config.baseURL
     }
 
     async run() {
@@ -525,7 +539,7 @@ export class MicrosoftRewardsBot {
             const errors: string[] = []
             const banned = { status: false, reason: '' }
 
-            this.axios = new Axios(account.proxy)
+            this.axios = new AxiosClient(account.proxy)
             this.queryEngine = this.buildQueryEngine()
             const verbose = process.env.DEBUG_REWARDS_VERBOSE === '1'
 
@@ -1124,6 +1138,21 @@ async function main(): Promise<void> {
 
     const bootstrap = async () => {
         try {
+            // STEP 1: Bootstrap configuration files (copy .example.jsonc if needed)
+            log('main', 'BOOTSTRAP', 'Checking configuration files...', 'log', 'cyan')
+            const createdFiles = FileBootstrap.bootstrap()
+
+            if (createdFiles.length > 0) {
+                FileBootstrap.displayStartupMessage(createdFiles)
+
+                // If accounts file was just created, it will be empty
+                // User needs to configure before running
+                if (createdFiles.includes('Accounts')) {
+                    log('main', 'BOOTSTRAP', 'Please configure your accounts in src/accounts.jsonc before running the bot.', 'warn', 'yellow')
+                    process.exit(0)
+                }
+            }
+
             // Check for updates BEFORE initializing and running tasks
             const updateMarkerPath = path.join(process.cwd(), '.update-happened')
             const isDocker = isDockerEnvironment()
