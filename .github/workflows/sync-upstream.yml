@@ -68,7 +68,11 @@ jobs:
       - name: Check for upstream changes
         id: check_changes
         run: |
-          CURRENT_BRANCH=$(git branch --show-current)
+          # Get current branch, falling back to main if not on a branch
+          CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "main")
+          echo "Current branch: $CURRENT_BRANCH"
+          
+          # Make sure we're on the right branch
           git checkout $CURRENT_BRANCH
           
           # Compare current HEAD with upstream to see if there are changes
@@ -85,7 +89,8 @@ jobs:
       - name: Sync with upstream
         if: steps.check_changes.outputs.has_changes == 'true'
         run: |
-          CURRENT_BRANCH=$(git branch --show-current)
+          CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "main")
+          echo "Current branch: $CURRENT_BRANCH"
           git checkout $CURRENT_BRANCH
           git merge upstream/$UPSTREAM_BRANCH
           echo "Successfully merged upstream changes"
