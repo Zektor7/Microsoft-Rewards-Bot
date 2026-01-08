@@ -22,8 +22,10 @@ RUN rm -rf node_modules \
     && npm ci --omit=dev --ignore-scripts \
     && npm cache clean --force
 
-# Install Chromium Headless Shell, and cleanup
+# Install Chromium Headless Shell for both playwright and rebrowser-playwright, and cleanup
 RUN npx playwright install --with-deps --only-shell chromium \
+    && npx rebrowser-playwright install --with-deps --only-shell chromium \
+    && touch .playwright-chromium-installed \
     && rm -rf /root/.cache /tmp/* /var/tmp/*
 
 ###############################################################################
@@ -78,6 +80,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=builder /usr/src/microsoft-rewards-bot/dist ./dist
 COPY --from=builder /usr/src/microsoft-rewards-bot/package*.json ./
 COPY --from=builder /usr/src/microsoft-rewards-bot/node_modules ./node_modules
+COPY --from=builder /usr/src/microsoft-rewards-bot/.playwright-chromium-installed ./.playwright-chromium-installed
 
 # Copy runtime scripts with proper permissions and normalize line endings for non-Unix users
 # IMPROVED: Scripts now organized in docker/ folder
