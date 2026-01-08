@@ -1,0 +1,159 @@
+name: Sync upstream repository
+
+on:
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      upstream_branch:
+        description: 'Upstream branch to sync from'
+        required: false
+        default: 'main'
+
+  # Schedule automatic sync (daily at 2 AM UTC)
+  schedule:
+    - cron: '0 2 * * *'
+
+env:
+  UPSTREAM_REPO: https://github.com/LightZirconite/Microsoft-Rewards-Bot.git
+  UPSTREAM_BRANCH: ${{ github.event.inputs.upstream_branch || 'main' }}
+
+jobs:
+  sync-upstream:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write   # Required if you want to trigger other workflows
+
+    steps:
+      # Checkout the current repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0  # Fetch all history for proper merging
+
+      # Setup Git
+      - name: Setup Git
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+      # Backup custom workflows before sync
+      - name: Backup custom workflows
+        run: |
+          BACKUP_DIR="./.github/workflows-backup"
+          WORKFLOWS_DIR="./.github/workflows"
+          
+          if [ -d "$WORKFLOWS_DIR" ] && [ "$(ls -A $WORKFLOWS_DIR 2>/dev/null)" ]; then
+            echo "Backing up custom workflows..."
+            mkdir -p "$BACKUP_DIR"
+            cp -r "$WORKFLOWS_DIR"/* "$BACKUP_DIR/"
+            echo "Workflows backed up to $BACKUP_DIR"
+          else
+            echo "No workflows found to backup"
+          fi
+
+      # Add upstream remote
+      - name: Add upstream remote
+        run: |
+          git remote add upstream $UPSTREAM_REPO || true
+          git remote set-url upstream $UPSTREAM_REPO
+
+      # Fetch upstream changes
+      - name: Fetch upstream changes
+        run: |
+          git fetch upstream $UPSTREAM_BRANCH
+
+      # Check if there are upstream changes before merging
+      - name: Check for upstream changes
+        id: check_changes
+        run: |
+          CURRENT_BRANCH=$(git branch --show-current)
+          git checkout $CURRENT_BRANCH
+          
+          # Compare current HEAD with upstream to see if there are changes
+          git diff --quiet HEAD upstream/$UPSTREAM_BRANCH 2>/dev/null
+          if [ $? -eq 1 ]; then
+            echo "Changes detected in upstream repository"
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "No changes in upstream repository"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          fi
+
+      # Sync with upstream only if there are changes
+      - name: Sync with upstream
+        if: steps.check_changes.outputs.has_changes == 'true'
+        run: |
+          CURRENT_BRANCH=$(git branch --show-current)
+          git checkout $CURRENT_BRANCH
+          git merge upstream/$UPSTREAM_BRANCH
+          echo "Successfully merged upstream changes"
+          
+      - name: No changes to merge
+        if: steps.check_changes.outputs.has_changes == 'false'
+        run: |
+          echo "No changes to merge from upstream"
+          
+      # Check if there are changes to commit
+      - name: Check for local changes
+        id: local_changes
+        run: |
+          if ! git diff --quiet; then
+            echo "Changes detected after merge"
+            git status
+            echo "has_local_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "No changes after merge"
+            echo "has_local_changes=false" >> $GITHUB_OUTPUT
+          fi
+
+      # Restore custom workflows after sync
+      - name: Restore custom workflows
+        run: |
+          BACKUP_DIR="./.github/workflows-backup"
+          WORKFLOWS_DIR="./.github/workflows"
+          
+          if [ -d "$BACKUP_DIR" ] && [ "$(ls -A $BACKUP_DIR 2>/dev/null)" ]; then
+            echo "Restoring custom workflows..."
+            mkdir -p "$WORKFLOWS_DIR"
+            cp -r "$BACKUP_DIR"/* "$WORKFLOWS_DIR/"
+            
+            # Clean up backup directory
+            rm -rf "$BACKUP_DIR"
+            echo "Workflows restored to $WORKFLOWS_DIR"
+          else
+            echo "No backed up workflows found to restore"
+          fi
+
+      # Commit and push changes if any
+      - name: Commit and push changes
+        if: steps.local_changes.outputs.has_local_changes == 'true'
+        run: |
+          # Add all changes
+          git add .
+          
+          # Check again if there are changes after add
+          if ! git diff --cached --quiet; then
+            # Create a commit with changes
+            git commit -m "Sync with upstream: $UPSTREAM_REPO $UPSTREAM_BRANCH [skip ci]"
+            
+            # Push changes to the repository
+            git push origin HEAD:$GITHUB_REF
+            echo "Changes pushed to the repository"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Skip commit if no changes
+      - name: Skip commit due to no changes
+        if: steps.local_changes.outputs.has_local_changes == 'false'
+        run: |
+          echo "Skipping commit since no changes detected in upstream repository"
+
+      # Trigger build workflow if there are changes
+      - name: Trigger build workflow
+        if: steps.local_changes.outputs.has_local_changes == 'true'
+        run: |
+          # This will trigger the build workflow which checks for changes
+          echo "Triggering build workflow due to upstream changes"
