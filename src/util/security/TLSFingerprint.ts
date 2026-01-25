@@ -272,6 +272,9 @@ export async function applyConnectionTiming(
  * Complete TLS fingerprinting protection setup
  * Call this after creating browser context
  *
+ * OPTIMIZED 2026: Single unified interceptor to prevent performance degradation
+ * Previous version had 3 separate interceptors causing 60s timeouts
+ *
  * @param context - Playwright browser context
  * @param userAgent - User agent string
  * @param isMobile - Mobile vs desktop
@@ -281,8 +284,63 @@ export async function setupTLSProtection(
   userAgent: string,
   isMobile: boolean,
 ): Promise<void> {
-  // Apply all protections
-  await applyEnhancedHeaders(context, userAgent, isMobile);
-  await applyRequestThrottling(context);
-  await applyConnectionTiming(context);
+  let lastRequestTime = 0;
+  const minDelay = 10; // Reduced from 50ms - only for non-critical resources
+  const maxDelay = 30; // Reduced from 200ms - balance between stealth and performance
+
+  // CRITICAL: Single unified route interceptor
+  // Combines headers, throttling, and timing in one pass
+  await context.route("**/*", async (route, request) => {
+    const resourceType = request.resourceType();
+    const now = Date.now();
+
+    // Skip interception for images/media to improve performance
+    if (
+      resourceType === "image" ||
+      resourceType === "media" ||
+      resourceType === "font"
+    ) {
+      return route.continue();
+    }
+
+    // 1. Request Throttling (only for non-critical resources)
+    const isCritical =
+      resourceType === "document" ||
+      resourceType === "xhr" ||
+      resourceType === "fetch";
+
+    if (!isCritical) {
+      const timeSinceLastRequest = now - lastRequestTime;
+      if (timeSinceLastRequest < minDelay) {
+        const delay = secureRandomInt(minDelay, maxDelay);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+
+    lastRequestTime = Date.now();
+
+    // 2. Enhanced Headers (for HTML/API requests only)
+    let finalHeaders = request.headers();
+
+    if (
+      isCritical ||
+      resourceType === "script" ||
+      resourceType === "stylesheet"
+    ) {
+      const referer = request.headers()["referer"];
+      const enhancedHeaders = generateRealisticHeaders(
+        userAgent,
+        isMobile,
+        resourceType as RequestType,
+        referer,
+      );
+      finalHeaders = {
+        ...request.headers(),
+        ...enhancedHeaders,
+      };
+    }
+
+    // 3. Continue with enhanced headers
+    await route.continue({ headers: finalHeaders });
+  });
 }
