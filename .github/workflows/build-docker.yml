@@ -14,11 +14,7 @@ on:
   push:
     branches: [ main ]
 
-  # Can also be triggered by other workflows
-  workflow_run:
-    workflows: ["Sync upstream repository"]
-    types:
-      - completed
+
 
 env:
   SHOULD_PUBLISH: ${{ github.event.inputs.publish_image == 'true' || github.event.inputs.publish_image == true || (github.event.inputs.publish_image == '' && true) }}
@@ -42,14 +38,9 @@ jobs:
       - name: Check for meaningful changes
         id: check_changes
         run: |
-          # By default, assume we should build if this is a push event
+          # Only build if this is a push event or manually triggered
           if [ "${{ github.event_name }}" = "push" ] || [ "${{ github.event.inputs.publish_image }}" = "true" ]; then
             echo "Should build based on trigger event"
-            echo "should_build=true" >> $GITHUB_OUTPUT
-          elif [ "${{ github.event_name }}" = "workflow_run" ]; then
-            # When triggered by another workflow, check if that workflow had changes
-            # For now, we'll build if this was triggered by sync workflow
-            echo "Build triggered by sync workflow, checking if needed"
             echo "should_build=true" >> $GITHUB_OUTPUT
           else
             echo "should_build=false" >> $GITHUB_OUTPUT
