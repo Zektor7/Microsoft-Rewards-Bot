@@ -8,7 +8,7 @@ WORKDIR /usr/src/microsoft-rewards-bot
 ENV PLAYWRIGHT_BROWSERS_PATH=0
 
 # Copy package files
-COPY package.json package-lock.json tsconfig.json ./
+COPY package.json package-lock.json ./
 
 # Install all dependencies required to build the script
 RUN npm ci --ignore-scripts
