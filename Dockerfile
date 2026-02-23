@@ -15,7 +15,6 @@ RUN npm ci --ignore-scripts
 
 # Copy source and build
 COPY . .
-RUN npm run build
 
 # Remove build dependencies, and reinstall only runtime dependencies
 RUN rm -rf node_modules \
